@@ -1,4 +1,4 @@
-package com.pazetto.futsorteio
+package com.pazetto.apptemplate
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

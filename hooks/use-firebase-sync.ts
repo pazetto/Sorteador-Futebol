@@ -1,3 +1,4 @@
+import React from 'react';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { useApp } from '@/lib/app-context';

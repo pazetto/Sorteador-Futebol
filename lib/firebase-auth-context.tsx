@@ -66,21 +66,26 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
     try {
       setError(null);
 
-      // URI de redirecionamento:
-      // - Expo Go:        exp://192.168.x.x:8081/--/oauth/callback
-      // - Dev Build/Prod: futsorteio://oauth/callback
-      // Expo auth proxy funciona em builds nativos e já está no Web client do Google
-      // Web: http://localhost:8081/oauth/callback
-      // Nativo (Android/iOS): https://auth.expo.io/@pazetto/futebol-sorteador
-      const redirectUri = Platform.OS === 'web'
-        ? 'http://localhost:8081/oauth/callback'
-        : 'https://auth.expo.io/@pazetto/futebol-sorteador';
+      // O redirect URI para Android nativo usa o formato reverso do Client ID
+      // Ex: com.googleusercontent.apps.74437798052-xxx:/oauth2redirect
+      // Esse formato é aceito pelo Google sem precisar cadastrar no Console
+      const webClientId = GOOGLE_CLIENT_IDS.web;
+      const reversedClientId = webClientId.replace('.apps.googleusercontent.com', '').split('-').reverse().join('.');
 
-      const clientId = Platform.select({
-        android: GOOGLE_CLIENT_IDS.android,
-        ios: GOOGLE_CLIENT_IDS.ios,
-        default: GOOGLE_CLIENT_IDS.web,
-      }) ?? GOOGLE_CLIENT_IDS.web;
+      let redirectUri: string;
+      let clientId: string;
+
+      if (Platform.OS === 'web') {
+        redirectUri = 'http://localhost:8081/oauth/callback';
+        clientId = webClientId;
+      } else if (Platform.OS === 'android') {
+        // Android nativo: usa o reversed client ID como scheme
+        redirectUri = `com.googleusercontent.apps.${webClientId.replace('.apps.googleusercontent.com', '')}:/oauth2redirect`;
+        clientId = webClientId;
+      } else {
+        redirectUri = 'https://auth.expo.io/@pazetto/futebol-sorteador';
+        clientId = webClientId;
+      }
 
       // Fluxo implícito (response_type=token) — não depende de expo-crypto nem de
       // módulos nativos, funcionando tanto no Expo Go quanto em builds EAS.

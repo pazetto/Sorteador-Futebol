@@ -443,6 +443,15 @@ export default function JogadoresScreen() {
 
   const confirmarExcluir = useCallback((jogador: Jogador) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Deseja excluir "${jogador.nome}"?`)) {
+        removerJogador(jogador.id);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      return;
+    }
+
     Alert.alert(
       'Excluir Jogador',
       `Deseja excluir "${jogador.nome}"?`,

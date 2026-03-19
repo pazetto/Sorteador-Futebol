@@ -1,4 +1,4 @@
-package com.pazetto.futsorteio
+package com.pazetto.apptemplate
 
 import android.app.Application
 import android.content.res.Configuration

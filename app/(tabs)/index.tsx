@@ -1,15 +1,27 @@
 import { ScrollView, Text, View, Pressable, Image } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
+import React, { useCallback, useState } from "react";
 import { ScreenContainer } from "@/components/screen-container";
 import { useApp } from "@/lib/app-context";
 import { calcularArtilharia, formatarData, MESES } from "@/lib/sorteio";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HomeScreen() {
   const { estado } = useApp();
   const colors = useColors();
   const router = useRouter();
+  const [nomeGrupo, setNomeGrupo] = useState('Fut Sorteio');
+
+  useFocusEffect(useCallback(() => {
+    AsyncStorage.getItem('@futsorteio:configuracoes').then(str => {
+      if (str) {
+        const config = JSON.parse(str);
+        if (config.nomeGrupo) setNomeGrupo(config.nomeGrupo);
+      }
+    }).catch(() => {});
+  }, []));
 
   const agora = new Date();
   const mes = agora.getMonth() + 1;
@@ -41,7 +53,7 @@ export default function HomeScreen() {
             </View>
             <View>
               <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>Bem-vindo ao</Text>
-              <Text style={{ color: '#FFFFFF', fontSize: 22, fontWeight: '700' }}>Fut Sorteio</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 22, fontWeight: '700' }}>{nomeGrupo}</Text>
             </View>
           </View>
           <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 4 }}>

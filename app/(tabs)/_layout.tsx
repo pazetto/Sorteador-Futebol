@@ -69,7 +69,7 @@ export default function TabLayout() {
         name="artilharia"
         options={{
           title: "Artilharia",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="crown.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="trophy.fill" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -83,7 +83,7 @@ export default function TabLayout() {
         name="configuracoes"
         options={{
           title: "Configurações",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="gearshape.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="gear" color={color} />,
         }}
       />
     </Tabs>
