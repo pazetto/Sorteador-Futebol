@@ -11,7 +11,7 @@ const config: ExpoConfig = {
   icon: "./assets/images/icon.png",
   scheme,
   userInterfaceStyle: "dark",
-  newArchEnabled: false,
+  newArchEnabled: true,
   ios: {
     supportsTablet: true,
     bundleIdentifier: bundleId,
@@ -55,6 +55,12 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
+    [
+      "expo-font",
+      {
+        fonts: ["node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.ttf"]
+      }
+    ],
     [
       "expo-splash-screen",
       {
