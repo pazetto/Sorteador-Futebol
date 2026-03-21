@@ -11,6 +11,11 @@ import "@/lib/_core/nativewind-pressable";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { AppProvider } from "@/lib/app-context";
 import { FirebaseAuthProvider } from "@/lib/firebase-auth-context";
+import { useFonts } from "expo-font";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import * as SplashScreen from "expo-splash-screen";
+
+SplashScreen.preventAutoHideAsync();
 import {
   SafeAreaFrameContext,
   SafeAreaInsetsContext,
@@ -42,7 +47,18 @@ export default function RootLayout() {
   const [insets, setInsets] = useState<EdgeInsets>(initialInsets);
   const [frame, setFrame] = useState<Rect>(initialFrame);
 
-  
+  // Carrega fontes do MaterialIcons explicitamente para garantir ícones no release
+  const [fontsLoaded] = useFonts({
+    ...MaterialIcons.font,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
   useEffect(() => {
     initManusRuntime();
   }, []);
