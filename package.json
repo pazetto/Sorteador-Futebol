@@ -38,7 +38,6 @@
     "expo": "~54.0.29",
     "expo-apple-authentication": "^55.0.8",
     "expo-audio": "~1.1.0",
-    "expo-auth-session": "^55.0.8",
     "expo-build-properties": "^1.0.10",
     "expo-constants": "~18.0.12",
     "expo-crypto": "~15.0.8",

@@ -1,27 +1,15 @@
-import { ScrollView, Text, View, Pressable, Image } from "react-native";
-import { useRouter, useFocusEffect } from "expo-router";
-import React, { useCallback, useState } from "react";
+import { ScrollView, Text, View, Pressable } from "react-native";
+import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useApp } from "@/lib/app-context";
 import { calcularArtilharia, formatarData, MESES } from "@/lib/sorteio";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HomeScreen() {
   const { estado } = useApp();
   const colors = useColors();
   const router = useRouter();
-  const [nomeGrupo, setNomeGrupo] = useState('Fut Sorteio');
-
-  useFocusEffect(useCallback(() => {
-    AsyncStorage.getItem('@futsorteio:configuracoes').then(str => {
-      if (str) {
-        const config = JSON.parse(str);
-        if (config.nomeGrupo) setNomeGrupo(config.nomeGrupo);
-      }
-    }).catch(() => {});
-  }, []));
 
   const agora = new Date();
   const mes = agora.getMonth() + 1;
@@ -32,6 +20,8 @@ export default function HomeScreen() {
   const ultimaPartida = estado.partidas[0];
   const totalJogadores = estado.jogadores.length;
   const totalPartidas = estado.partidas.length;
+
+  const partidaAtual = estado.partidaAtual;
 
   return (
     <ScreenContainer>
@@ -53,7 +43,7 @@ export default function HomeScreen() {
             </View>
             <View>
               <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>Bem-vindo ao</Text>
-              <Text style={{ color: '#FFFFFF', fontSize: 22, fontWeight: '700' }}>{nomeGrupo}</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 22, fontWeight: '700' }}>Fut Sorteio</Text>
             </View>
           </View>
           <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 4 }}>
@@ -62,6 +52,58 @@ export default function HomeScreen() {
         </View>
 
         <View style={{ paddingHorizontal: 16, marginTop: -16 }}>
+
+          {/* ── Banner: partida em andamento ─────────────────────────────── */}
+          {partidaAtual && (
+            <Pressable
+              onPress={() => router.push('/partida' as any)}
+              style={({ pressed }) => ({
+                backgroundColor: '#EF4444',
+                borderRadius: 16,
+                padding: 16,
+                marginBottom: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 14,
+                shadowColor: '#EF4444',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.4,
+                shadowRadius: 8,
+                elevation: 8,
+                opacity: pressed ? 0.9 : 1,
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+              })}
+            >
+              {/* Ícone pulsante visual */}
+              <View style={{
+                width: 48, height: 48, borderRadius: 24,
+                backgroundColor: 'rgba(255,255,255,0.25)',
+                alignItems: 'center', justifyContent: 'center'
+              }}>
+                <IconSymbol name="sportscourt.fill" size={26} color="#FFFFFF" />
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '800' }}>
+                  ⚡ Partida em Andamento!
+                </Text>
+                {/* Placar atual */}
+                <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 13, marginTop: 2 }}>
+                  {partidaAtual.times
+                    .map((t) => `${t.nome.replace('Time ', '')} ${t.totalGols}`)
+                    .join(' × ')}
+                </Text>
+              </View>
+
+              <View style={{
+                backgroundColor: 'rgba(255,255,255,0.25)',
+                borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6
+              }}>
+                <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Voltar</Text>
+              </View>
+            </Pressable>
+          )}
+
           {/* Botão principal */}
           <Pressable
             onPress={() => router.push('/sorteio' as any)}

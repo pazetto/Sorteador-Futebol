@@ -11,21 +11,6 @@ import { useColors } from '@/hooks/use-colors';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import * as Haptics from 'expo-haptics';
 import { useKeepAwake } from 'expo-keep-awake';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Notifications from 'expo-notifications';
-
-// Configura como notificações aparecem quando o app está em foreground (apenas nativo)
-if (Platform.OS !== 'web') {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  });
-}
 
 // ─── Modal de configuração de duração ────────────────────────────────────────
 interface ModalDuracaoProps {
@@ -214,16 +199,9 @@ function ModalResumo({ visivel, times, duracao, onConfirmar, onCancelar }: Modal
                   <Text style={{ fontSize: 16 }}>🧤</Text>
                   <Text style={{ flex: 1, fontSize: 14, color: colors.foreground }}>{time.goleiro.nome}</Text>
                   {time.goleiro.gols > 0 && (
-                    <View style={{ alignItems: 'flex-end', gap: 2 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Text style={{ fontSize: 14 }}>⚽</Text>
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: time.cor }}>{time.goleiro.gols}</Text>
-                      </View>
-                      {(time.goleiro.minutosGols ?? []).length > 0 && (
-                        <Text style={{ fontSize: 11, color: colors.muted }}>
-                          {(time.goleiro.minutosGols ?? []).map(m => `${m}'`).join('  ')}
-                        </Text>
-                      )}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Text style={{ fontSize: 14 }}>⚽</Text>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: time.cor }}>{time.goleiro.gols}</Text>
                     </View>
                   )}
                 </View>
@@ -244,16 +222,9 @@ function ModalResumo({ visivel, times, duracao, onConfirmar, onCancelar }: Modal
                   >
                     <Text style={{ fontSize: 14, color: colors.foreground, flex: 1 }}>{j.nome}</Text>
                     {j.gols > 0 ? (
-                      <View style={{ alignItems: 'flex-end', gap: 2 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <Text style={{ fontSize: 14 }}>⚽</Text>
-                          <Text style={{ fontSize: 14, fontWeight: '700', color: time.cor }}>{j.gols}</Text>
-                        </View>
-                        {(j.minutosGols ?? []).length > 0 && (
-                          <Text style={{ fontSize: 11, color: colors.muted }}>
-                            {(j.minutosGols ?? []).map(m => `${m}'`).join('  ')}
-                          </Text>
-                        )}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Text style={{ fontSize: 14 }}>⚽</Text>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: time.cor }}>{j.gols}</Text>
                       </View>
                     ) : (
                       <Text style={{ fontSize: 13, color: colors.muted }}>—</Text>
@@ -428,115 +399,38 @@ export default function PartidaScreen() {
   const router = useRouter();
   const [cronometroAtivo, setCronometroAtivo] = useState(true);
   const [segundos, setSegundos] = useState(0);
-  const [duracaoTotal, setDuracaoTotal] = useState(45 * 60); // fallback 45 min
+  const [duracaoTotal, setDuracaoTotal] = useState(45 * 60);
   const [modalDuracaoVisivel, setModalDuracaoVisivel] = useState(false);
   const [modalResumoVisivel, setModalResumoVisivel] = useState(false);
-  const [alarmeDisparado, setAlarmeDisparado] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const notifIdRef = useRef<string | null>(null);
+  // ✅ Ref para evitar stale closure no intervalo
+  const segundosRef = useRef(0);
 
   useKeepAwake();
 
-  // Solicita permissão de notificação ao montar (apenas nativo)
-  useEffect(() => {
-    if (Platform.OS !== 'web') {
-      Notifications.requestPermissionsAsync();
-    }
-  }, []);
-
-  // Lê o tempo configurado nas Configurações
-  useEffect(() => {
-    async function carregarTempo() {
-      try {
-        const configStr = await AsyncStorage.getItem('@futsorteio:configuracoes');
-        if (configStr) {
-          const config = JSON.parse(configStr);
-          if (config.tempoPartidaPadrao) {
-            setDuracaoTotal(config.tempoPartidaPadrao * 60);
-          }
-        }
-      } catch (e) {
-        // mantém o fallback de 45 min
-      }
-    }
-    carregarTempo();
-  }, []);
-
-  // Agenda notificação de alarme sempre que duracaoTotal mudar ou cronômetro ligar
-  useEffect(() => {
-    if (Platform.OS === 'web') return;
-    async function agendarAlarme() {
-      if (notifIdRef.current) {
-        await Notifications.cancelScheduledNotificationAsync(notifIdRef.current);
-        notifIdRef.current = null;
-      }
-      if (!cronometroAtivo) return;
-      const segundosRestantes = Math.max(1, duracaoTotal - segundos);
-      const id = await Notifications.scheduleNotificationAsync({
-        content: {
-          title: '⏱ Tempo encerrado!',
-          body: 'A partida chegou ao fim. Hora de encerrar!',
-          sound: true,
-        },
-        trigger: segundosRestantes <= 1
-          ? null
-          : { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: segundosRestantes },
-      });
-      notifIdRef.current = id;
-    }
-    agendarAlarme();
-  }, [duracaoTotal, cronometroAtivo]);
-
-  // Cancela notificação ao desmontar a tela
-  useEffect(() => {
-    return () => {
-      if (Platform.OS !== 'web' && notifIdRef.current) {
-        Notifications.cancelScheduledNotificationAsync(notifIdRef.current);
-      }
-    };
-  }, []);
-
   const partida = estado.partidaAtual;
 
-  // Cronômetro + alarme ao zerar
+  // ✅ CORREÇÃO: cronômetro sem chamar dispatch dentro do setState updater
   useEffect(() => {
     if (cronometroAtivo && segundos < duracaoTotal) {
       intervalRef.current = setInterval(() => {
-        setSegundos((s) => {
-          const novo = s + 1;
-          atualizarDuracao(novo);
-          return novo;
-        });
+        // Incrementa ref e state separadamente — sem dispatch dentro do updater
+        segundosRef.current += 1;
+        setSegundos(segundosRef.current);
       }, 1000);
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
-      // Dispara alarme local quando o tempo esgota (app em foreground)
-      if (cronometroAtivo && segundos >= duracaoTotal && !alarmeDisparado) {
-        setAlarmeDisparado(true);
-        setCronometroAtivo(false);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning), 400);
-        setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning), 800);
-        // Notificação imediata com som (apenas nativo)
-        if (Platform.OS !== 'web') {
-          Notifications.scheduleNotificationAsync({
-            content: {
-              title: '⏱ Tempo encerrado!',
-              body: 'A partida chegou ao fim. Hora de encerrar!',
-              sound: true,
-            },
-            trigger: null,
-          });
-        }
-        Alert.alert(
-          '⏱ Tempo Encerrado!',
-          'O tempo da partida terminou.',
-          [{ text: 'OK', onPress: abrirResumo }]
-        );
-      }
     }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [cronometroAtivo, segundos, duracaoTotal, atualizarDuracao, alarmeDisparado]);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [cronometroAtivo, duracaoTotal]);
+  // Nota: removemos `segundos` das deps para não recriar o intervalo a cada tick
+
+  // ✅ CORREÇÃO: sincronizar duração com o contexto global em effect separado
+  useEffect(() => {
+    atualizarDuracao(segundos);
+  }, [segundos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Redirecionar se não há partida
   useEffect(() => {
@@ -547,8 +441,8 @@ export default function PartidaScreen() {
 
   const handleGol = useCallback((timeId: string, jogadorId: string, isGoleiro: boolean) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    registrarGol(timeId, jogadorId, isGoleiro, segundos);
-  }, [registrarGol, segundos]);
+    registrarGol(timeId, jogadorId, isGoleiro);
+  }, [registrarGol]);
 
   const handleDesfazer = useCallback((timeId: string, jogadorId: string, isGoleiro: boolean) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -556,6 +450,7 @@ export default function PartidaScreen() {
   }, [desfazerGol]);
 
   function abrirResumo() {
+    if (intervalRef.current) clearInterval(intervalRef.current);
     setCronometroAtivo(false);
     setModalResumoVisivel(true);
   }
@@ -563,9 +458,6 @@ export default function PartidaScreen() {
   function confirmarEncerrar() {
     encerrarPartida();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    if (Platform.OS !== 'web' && notifIdRef.current) {
-      Notifications.cancelScheduledNotificationAsync(notifIdRef.current);
-    }
     setModalResumoVisivel(false);
     router.replace('/historico' as any);
   }
@@ -581,7 +473,7 @@ export default function PartidaScreen() {
   }
 
   const tempoRestante = Math.max(0, duracaoTotal - segundos);
-  const percentualTempo = duracaoTotal > 0 ? segundos / duracaoTotal : 0;
+  const percentualTempo = duracaoTotal > 0 ? Math.min(segundos / duracaoTotal, 1) : 0;
 
   return (
     <ScreenContainer containerClassName="bg-background">
@@ -652,7 +544,7 @@ export default function PartidaScreen() {
         ))}
       </ScrollView>
 
-      {/* Botão flutuante de encerrar (fixo na base) */}
+      {/* Botão flutuante de encerrar */}
       <View style={{
         position: 'absolute',
         bottom: 0,
@@ -689,7 +581,6 @@ export default function PartidaScreen() {
         duracao={duracaoTotal}
         onConfirmar={(d) => {
           setDuracaoTotal(d);
-          setAlarmeDisparado(false); // permite disparar novamente com o novo tempo
           setModalDuracaoVisivel(false);
         }}
         onCancelar={() => setModalDuracaoVisivel(false)}

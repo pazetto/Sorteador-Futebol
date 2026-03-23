@@ -17,7 +17,6 @@ function embaralhar<T>(arr: T[]): T[] {
 
 // ─── Calcular score de equilíbrio de um jogador ───────────────────────────────
 function calcularScore(jogador: Jogador): number {
-  // Normaliza nível (1-10), idade (15-50) e peso (50-120) para um score 0-100
   const scoreNivel = (jogador.nivel / 10) * 60;
   const scoreIdade = Math.max(0, (1 - Math.abs(jogador.idade - 25) / 25)) * 20;
   const scorePeso = Math.max(0, (1 - Math.abs(jogador.peso - 75) / 45)) * 20;
@@ -25,19 +24,15 @@ function calcularScore(jogador: Jogador): number {
 }
 
 // ─── Algoritmo de sorteio equilibrado ────────────────────────────────────────
-// Distribui jogadores de forma que a soma dos scores seja similar entre os times
 function sortearEquilibrado(jogadores: Jogador[], numTimes: number): Jogador[][] {
   const ordenados = [...jogadores].sort((a, b) => calcularScore(b) - calcularScore(a));
   const times: Jogador[][] = Array.from({ length: numTimes }, () => []);
-  const scores: number[] = Array(numTimes).fill(0);
 
-  // Distribui em "cobra" (snake draft): 0,1,2,...,n-1,n-1,...,1,0,0,1,...
   for (let i = 0; i < ordenados.length; i++) {
     const fase = Math.floor(i / numTimes);
     const posNaFase = i % numTimes;
     const timeIdx = fase % 2 === 0 ? posNaFase : numTimes - 1 - posNaFase;
     times[timeIdx].push(ordenados[i]);
-    scores[timeIdx] += calcularScore(ordenados[i]);
   }
 
   return times;
@@ -54,9 +49,11 @@ function sortearAleatorio(jogadores: Jogador[], numTimes: number): Jogador[][] {
 }
 
 // ─── Função principal de sorteio ─────────────────────────────────────────────
+// coresPersonalizadas: lista de hex strings das cores selecionadas nas Configurações
 export function sortearTimes(
   todosJogadores: Jogador[],
-  config: ConfigSorteio
+  config: ConfigSorteio,
+  coresPersonalizadas?: string[],
 ): Time[] {
   const { numTimes, jogadoresPorTime, incluirGoleiro, equilibrarPorNivel, jogadoresSelecionados } = config;
 
@@ -87,11 +84,27 @@ export function sortearTimes(
     timesLinha = sortearAleatorio(linhaParaSortear, numTimes);
   }
 
-  // Montar times com cores
-  const coresEmbaralhadas = embaralhar(CORES_TIMES).slice(0, numTimes);
+  // ─── Montar paleta de cores ───────────────────────────────────────────────
+  // Se há cores personalizadas válidas, filtra o CORES_TIMES para usar apenas essas.
+  // Caso contrário usa o pool completo.
+  let poolCores = CORES_TIMES;
+
+  if (coresPersonalizadas && coresPersonalizadas.length > 0) {
+    const hexSet = new Set(coresPersonalizadas);
+    const filtrado = CORES_TIMES.filter((c) => hexSet.has(c.hex));
+    if (filtrado.length > 0) {
+      poolCores = filtrado;
+    }
+  }
+
+  // Embaralha e pega o número necessário de cores (com repetição se pool menor que times)
+  const coresEmbaralhadas = embaralhar(poolCores);
+  const coresSelecionadas = Array.from({ length: numTimes }, (_, i) =>
+    coresEmbaralhadas[i % coresEmbaralhadas.length]
+  );
 
   return timesLinha.map((jogadoresDoTime, i) => {
-    const cor = coresEmbaralhadas[i];
+    const cor = coresSelecionadas[i];
     const goleiro = goleirosDistribuidos[i];
 
     const jogadoresGol: JogadorGol[] = jogadoresDoTime.map((j) => ({
